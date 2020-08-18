@@ -41,8 +41,18 @@ class CreateOrderService {
       products,
     );
 
-    if (!checkProductsList) {
+    if (!checkProductsList.length) {
       throw new AppError('Invalid Products. Please check the provided list.');
+    }
+
+    const productsListIds = checkProductsList.map(product => product.id);
+
+    const inexistentProducts = products.filter(
+      product => !productsListIds.includes(product.id),
+    );
+
+    if (inexistentProducts.length) {
+      throw new AppError(`Could not find product ${inexistentProducts[0].id}`);
     }
 
     function hasDuplicates(list: any): boolean {
@@ -56,12 +66,24 @@ class CreateOrderService {
         'Invalid Products List. Check if is there any duplicated product.',
       );
     }
-    const quantities = checkProductsList.map(product => product.quantity);
+    // const quantities = checkProductsList.map(product => product.quantity);
 
-    const checkQuantities = quantities.some(it => it < 1);
+    // const checkStock = quantities.includes(0);
 
-    if (checkQuantities) {
-      throw new AppError('The chosen product is out of stock.');
+    // if (checkStock) {
+    //   throw new AppError('The chosen product is out of stock.');
+    // }
+
+    const productsWithNotEnoughStock = products.filter(
+      product =>
+        checkProductsList.filter(p => p.id === product.id)[0].quantity <
+        product.quantity,
+    );
+
+    if (productsWithNotEnoughStock.length) {
+      throw new AppError(
+        `The quantity ${productsWithNotEnoughStock[0].quantity} is not available for product ${productsWithNotEnoughStock[0].id}. `,
+      );
     }
 
     const serializedProducts = products.map(product => ({
@@ -74,6 +96,15 @@ class CreateOrderService {
       customer,
       products: serializedProducts,
     });
+
+    const updatedProductsQuantities = products.map(product => ({
+      id: product.id,
+      quantity:
+        checkProductsList.filter(p => p.id === product.id)[0].quantity -
+        product.quantity,
+    }));
+
+    await this.productsRepository.updateQuantity(updatedProductsQuantities);
 
     return order;
   }
