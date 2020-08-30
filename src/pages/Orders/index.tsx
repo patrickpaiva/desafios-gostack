@@ -27,12 +27,37 @@ interface Food {
   thumbnail_url: string;
 }
 
+interface Extra {
+  id: number;
+  name: string;
+  value: number;
+  quantity: number;
+}
+
+interface Order {
+  id: number;
+  product_id: number;
+  name: string;
+  description: string;
+  price: number;
+  category: number;
+  thumbnail_url: string;
+  extras: Extra[];
+}
+
 const Orders: React.FC = () => {
   const [orders, setOrders] = useState<Food[]>([]);
 
   useEffect(() => {
     async function loadOrders(): Promise<void> {
-      // Load orders from API
+      await api.get('orders').then(response => {
+        setOrders(
+          response.data.map((order: Order) => ({
+            ...order,
+            formattedPrice: formatValue(order.price),
+          })),
+        );
+      });
     }
 
     loadOrders();
